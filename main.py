@@ -78,8 +78,8 @@ class AI66MofangPlugin(Star):
         super().__init__(context)
 
         # 配置项
-        self.prob       = float(config.get("模仿概率", 0.12))
-        self.cooldown_s = int(config.get("冷却秒", 20))
+        self.prob       = float(config.get("模仿概率", 0.02))
+        self.cooldown_s = int(config.get("冷却秒", 30))
         self.max_chars  = int(config.get("最大保存字数", 200))
         self.allow_qq   = [str(q) for q in config.get("允许清理的QQ号", [])]
 
@@ -101,18 +101,18 @@ class AI66MofangPlugin(Star):
         # ④ 保存 task 引用，卸载时取消
         self._clean_task: asyncio.Task | None = None
 
-        logger.info(f"插件初始化，数据目录：{base_dir}")
+        logger.info(f"[AI66] 插件初始化，数据目录：{base_dir}")
 
     # ──────────────────── 生命周期钩子 ────────────────────
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """插件异步初始化：建库 + 创建 session + 启动清理任务"""
-        await self._init_db()
+        await self._setup_db()
         self._session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=10)
         )
         self._clean_task = asyncio.create_task(self._auto_clean_loop())
-        logger.info("异步初始化完成")
+        logger.info("[AI66] 异步初始化完成")
 
     async def destroy(self):
         """插件卸载：取消清理任务、关闭 session、关闭线程池"""
@@ -127,11 +127,11 @@ class AI66MofangPlugin(Star):
             await self._session.close()
 
         self._executor.shutdown(wait=False)
-        logger.info("资源已全部释放")
+        logger.info("[AI66] 资源已全部释放")
 
     # ──────────────────── 数据库初始化 ────────────────────
 
-    async def _init_db(self):
+    async def _setup_db(self) -> None:
         """异步建表 + 建索引"""
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute("""
@@ -283,7 +283,7 @@ class AI66MofangPlugin(Star):
                         )
                         img_path = save_path
             except Exception as e:
-                logger.warning(f"图片下载失败：{e}")
+                logger.warning(f"[AI66] 图片下载失败：{e}")
 
         # ── 异步写入数据库 ──
         async with aiosqlite.connect(self.db_path) as db:
@@ -323,7 +323,6 @@ class AI66MofangPlugin(Star):
             ) as cur:
                 candidates: list = list(await cur.fetchall())
 
-
         if not candidates:
             return
 
@@ -340,11 +339,20 @@ class AI66MofangPlugin(Star):
         # 设置冷却
         self._cooldown[group_id] = now_s + self.cooldown_s
 
-        # 发送
+        # 主动发送到群（不 yield / 不回复，避免直接回复某个群员）
         img_file = chosen["图片"]
-        content  = chosen["内容"]
+        text     = chosen["内容"]
+
+        from astrbot.api.event import MessageChain
 
         if img_file and os.path.exists(img_file):
-            yield event.image_result(img_file)
-        elif content:
-            yield event.plain_result(content)
+            chain = MessageChain().file_image(img_file)
+        elif text:
+            chain = MessageChain().message(text)
+        else:
+            return
+
+        await self.context.send_message(  # type: ignore[union-attr]
+            event.unified_msg_origin,
+            chain,
+        )
