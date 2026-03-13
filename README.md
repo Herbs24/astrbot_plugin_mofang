@@ -1,14 +1,19 @@
-# astrbot-plugin-helloworld
+# 群聊拟人模仿复读插件
 
-AstrBot 插件模板 / A template plugin for AstrBot plugin feature
+AstrBot 插件，自动学习群消息并随机模仿群成员发言。
 
-> [!NOTE]
-> This repo is just a template of [AstrBot](https://github.com/AstrBotDevs/AstrBot) Plugin.
-> 
-> [AstrBot](https://github.com/AstrBotDevs/AstrBot) is an agentic assistant for both personal and group conversations. It can be deployed across dozens of mainstream instant messaging platforms, including QQ, Telegram, Feishu, DingTalk, Slack, LINE, Discord, Matrix, etc. In addition, it provides a reliable and extensible conversational AI infrastructure for individuals, developers, and teams. Whether you need a personal AI companion, an intelligent customer support agent, an automation assistant, or an enterprise knowledge base, AstrBot enables you to quickly build AI applications directly within your existing messaging workflows.
+## 功能
+- 自动学习群内文本与图片消息
+- 按概率随机模仿（支持图片）
+- 每群独立冷却，消息权重机制
+- 每月自动清理过期数据
+- `/ai清理` 私聊指令（白名单）
 
-# Supports
-
-- [AstrBot Repo](https://github.com/AstrBotDevs/AstrBot)
-- [AstrBot Plugin Development Docs (Chinese)](https://docs.astrbot.app/dev/star/plugin-new.html)
-- [AstrBot Plugin Development Docs (English)](https://docs.astrbot.app/en/dev/star/plugin-new.html)
+## 配置项
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| 数据目录 | ./data/AI66 | 数据存储路径 |
+| 模仿概率 | 0.12 | 触发概率 0~1 |
+| 冷却秒 | 20 | 每群冷却时间 |
+| 最大保存字数 | 200 | 单条消息保存上限 |
+| 允许清理的QQ号 | [] | 可执行清理的QQ号 |
